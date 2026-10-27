@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from huggingface_hub import hf_hub_download
 
-from typed_models.formatting import question_options, state_text
+from typed_encoders.formatting import question_options, state_text
 
 REPO, REVISION = "tasksource/synthetic-typed-decisions", "7ec5a61d5db158f637c30adeb6e66660f1dfee87"
 

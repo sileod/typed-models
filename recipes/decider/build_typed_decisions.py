@@ -11,7 +11,7 @@ import sys
 import pandas as pd
 from huggingface_hub import hf_hub_download
 
-from typed_models.formatting import question_options, state_text
+from typed_encoders.formatting import question_options, state_text
 
 REV = "6a7927fa"
 df = pd.read_parquet(hf_hub_download("LocalLLaMA/typed-decisions", "all/train-00000-of-00001.parquet", repo_type="dataset", revision=REV))

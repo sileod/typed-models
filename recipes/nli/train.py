@@ -34,7 +34,7 @@ import tasksource  # noqa: E402
 from tasksource import list_tasks, load_task  # noqa: E402
 from transformers.modeling_outputs import SequenceClassifierOutput  # noqa: E402
 
-from typed_models.remote import register_remote  # noqa: E402
+from typed_encoders.remote import register_remote  # noqa: E402
 from transformers import AutoTokenizer  # noqa: E402
 
 NLI = ["nli", "entailment", "rte", "fld", "scone", "rule", "logic", "nope", "cycic_classification",

@@ -27,7 +27,7 @@ import tasknet as tn  # noqa: E402
 from tasksource import list_tasks, load_task  # noqa: E402
 from transformers import AutoTokenizer  # noqa: E402
 
-from typed_models.remote import register_remote  # noqa: E402
+from typed_encoders.remote import register_remote  # noqa: E402
 
 SYNTAX = ("pos_tags", "chunk_tags", "deprel", "conll2000")  # token tasks that tag grammar, not spans to extract
 JEV, JEV_REVISION = "tasksource/tasksource-jev-typed-decisions", "v2026.10.20.7"

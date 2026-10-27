@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the template-insensitive content firewall (typed_models.firewall) to a grouped manifest: drop requests whose
+"""Apply the template-insensitive content firewall (typed_encoders.firewall) to a grouped manifest: drop requests whose
 content overlaps the Decision Index 0.3 suite.
 
   python3 recipes/decider/firewall.py data/jev_full.jsonl data/jev_cfw.jsonl
@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from paths import SUITE
-from typed_models.firewall import ContentFirewall
+from typed_encoders.firewall import ContentFirewall
 
 
 def main():

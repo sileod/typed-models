@@ -1,4 +1,4 @@
-# typed-models
+# typed-encoders
 
 Training recipes for small encoders that answer **typed** questions about a text: decisions (pick among options,
 with a probability for each) and extraction (the spans that answer a field, or nothing). Each recipe reproduces a
@@ -15,7 +15,8 @@ The data is [tasksource/tasksource-jev-typed-decisions](https://huggingface.co/d
 Extraction and NLI train with [tasknet](https://github.com/sileod/tasknet).
 
 ```bash
-pip install -e ".[decider,extraction,nli]"
+pip install typed-encoders                     # the models; for the recipes: pip install -e ".[decider,extraction,nli]"
+pip install git+https://github.com/apolinario/decision-index   # decider recipe only (not on PyPI)
 bash recipes/decider/decider_nano_v5.sh          # needs a Decision Index kit checkout, see the script
 bash recipes/extraction/clairic_extraction.sh
 bash recipes/nli/ultrabert_nli.sh
@@ -23,7 +24,7 @@ bash recipes/nli/ultrabert_nli.sh
 
 ## Decider
 
-A joint cross-encoder (`typed_models/decider.py`): every option of a question gets a scalar, softmaxed over the
+A joint cross-encoder (`typed_encoders/decider.py`): every option of a question gets a scalar, softmaxed over the
 question's options. A request's state is encoded once and shared by all its questions and options (tree attention:
 an option sees the state, its question and itself), so a request with many questions costs little more than one.
 Trained with soft cross-entropy against target distributions on a 480k-request mix:

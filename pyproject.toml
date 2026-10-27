@@ -3,17 +3,18 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "typed-models"
+name = "typed-encoders"
 version = "0.1.0"
 description = "Small encoders for typed decisions and typed extraction: training recipes for the tasksource models"
 readme = "README.md"
 requires-python = ">=3.10"
+urls = { Repository = "https://github.com/sileod/typed-models" }
 dependencies = ["torch", "transformers>=5", "datasets", "huggingface_hub", "safetensors", "numpy", "pandas", "pyarrow"]
 
 [project.optional-dependencies]
-decider = ["tasksource", "decision-index @ git+https://github.com/apolinario/decision-index"]
+decider = ["tasksource"]  # rebuilding the training mix also needs decision-index (git only, see recipes/decider)
 extraction = ["tasknet", "tasksource", "python-dateutil"]
 nli = ["tasknet", "tasksource"]
 
 [tool.setuptools.packages.find]
-include = ["typed_models"]
+include = ["typed_encoders"]

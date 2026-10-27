@@ -38,7 +38,7 @@ from decision_index.suite.build.adapters_selection import num  # noqa: E402
 from decision_index.suite.build.layout import choice_row  # noqa: E402
 from decision_index.suite.build.normalize_text import _mc_row  # noqa: E402
 
-from typed_models.formatting import question_options, state_text  # noqa: E402
+from typed_encoders.formatting import question_options, state_text  # noqa: E402
 
 OUT = DATA / "index_train"
 SEED = 20261009

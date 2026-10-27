@@ -55,7 +55,7 @@ def grams(s):
 
 class Firewall:
     def __init__(self):
-        from typed_models.formatting import state_text
+        from typed_encoders.formatting import state_text
         self.exact, self.shingles = set(), set()
         for f in ("selected-rows.jsonl.gz", "added-rows.jsonl.gz", "gsm8k-rows.jsonl.gz"):
             for line in gzip.open(SUITE / f, "rt", encoding="utf-8"):

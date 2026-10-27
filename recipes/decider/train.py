@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train a joint decider (typed_models.decider) on a grouped request manifest (see build_*.py and mix.py).
+"""Train a joint decider (typed_encoders.decider) on a grouped request manifest (see build_*.py and mix.py).
 
 Each question -> K option logits -> soft cross-entropy against its target distribution. Questions with more than
 --max_k options keep every positive plus sampled negatives. --task_prompts renders that share of single-question
@@ -19,8 +19,8 @@ import torch
 from tasksource.jev.task_prompts import STYLES, describe_options, task_style
 from transformers import get_cosine_schedule_with_warmup
 
-from typed_models.decider import Decider, shared_logits
-from typed_models.rules import load_manifest
+from typed_encoders.decider import Decider, shared_logits
+from typed_encoders.rules import load_manifest
 
 NOTA = "None of the other options"  # the jev pipeline's position-free rewording of a trailing "none of the above"
 NOTA_LIKE = re.compile(r"\b(none|neither|other|all of the above|n/a)\b", re.I)
