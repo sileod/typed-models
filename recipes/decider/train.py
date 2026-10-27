@@ -10,6 +10,7 @@ options" choice.
 """
 
 import argparse
+import os
 import random
 import re
 import time
@@ -98,9 +99,13 @@ def main():
     ap.add_argument("--tok_budget", type=int, default=12288, help="tokens per forward/backward micro-batch")
     ap.add_argument("--row_tokens", type=int, default=8192)
     ap.add_argument("--save_every", type=int, default=8000)
+    ap.add_argument("--resume_every", type=int, default=2000,
+                    help="write <out>/resume.pt (weights, optimizer, scheduler, data cursor, RNG); a rerun continues from it")
     a = ap.parse_args()
     styles = {name: float(weight or 1) for name, _, weight in (s.partition(":") for s in a.task_styles.split(","))}
-    if list(Path(a.out).glob("step-*")):
+    resume_path = Path(a.out) / "resume.pt"
+    resume = torch.load(resume_path, map_location="cpu", weights_only=False) if resume_path.exists() else None
+    if list(Path(a.out).glob("step-*")) and resume is None:
         raise SystemExit(f"{a.out} already has checkpoints")
 
     rng = random.Random(a.seed)
@@ -116,8 +121,22 @@ def main():
     meta = {k: getattr(a, k) for k in ("manifest", "lr", "batch_requests", "max_k", "seed", "steps", "max_length", "nota",
                                        "task_prompts", "task_styles", "row_tokens", "tok_budget")}
 
-    ri, t0, run_loss, run_n, run_acc = 0, time.time(), 0.0, 0, 0.0
-    for step in range(1, a.steps + 1):
+    ri, start = 0, 1
+    if resume is not None:  # same arguments, same data stream: continue exactly where the last resume.pt left off
+        if resume["meta"] != meta:
+            raise SystemExit(f"{resume_path} was written with other arguments: {resume['meta']}")
+        scorer.model.load_state_dict(resume["model"])
+        opt.load_state_dict(resume["opt"])
+        sch.load_state_dict(resume["sch"])
+        rng.setstate(resume["rng"])
+        torch.set_rng_state(resume["torch_rng"])
+        if torch.cuda.is_available() and resume["cuda_rng"] is not None:
+            torch.cuda.set_rng_state_all(resume["cuda_rng"])
+        ri, start = resume["ri"], resume["step"] + 1
+        print(f"resumed from {resume_path} at step {resume['step']}", flush=True)
+        del resume
+    t0, run_loss, run_n, run_acc = time.time(), 0.0, 0, 0.0
+    for step in range(start, a.steps + 1):
         opt.zero_grad(set_to_none=True)
         qs = []
         for _ in range(a.batch_requests):
@@ -151,10 +170,17 @@ def main():
         sch.step()
         if step % 50 == 0:
             print(f"step {step}/{a.steps} loss {run_loss / max(1, run_n):.4f} acc {run_acc / max(1, run_n):.3f} "
-                  f"lr {sch.get_last_lr()[0]:.2e} {(time.time() - t0) / step:.2f}s/step", flush=True)
+                  f"lr {sch.get_last_lr()[0]:.2e} {(time.time() - t0) / (step - start + 1):.2f}s/step", flush=True)
             run_loss, run_n, run_acc = 0.0, 0, 0.0
         if step % a.save_every == 0 or step == a.steps:
             scorer.save_pretrained(f"{a.out}/step-{step}", step=step, train=meta)
+        if step % a.resume_every == 0 and step < a.steps:
+            Path(a.out).mkdir(parents=True, exist_ok=True)
+            torch.save({"step": step, "ri": ri, "meta": meta, "model": scorer.model.state_dict(), "opt": opt.state_dict(),
+                        "sch": sch.state_dict(), "rng": rng.getstate(), "torch_rng": torch.get_rng_state(),
+                        "cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None},
+                       f"{resume_path}.tmp")
+            os.replace(f"{resume_path}.tmp", resume_path)  # atomic: a kill mid-write leaves the previous one
     print("DONE", a.out, flush=True)
 
 
