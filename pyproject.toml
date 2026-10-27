@@ -1,12 +1,14 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "typed-encoders"
-version = "0.1.0"
+version = "0.1.1"
 description = "Small encoders for typed decisions and typed extraction: training recipes for the tasksource models"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 urls = { Repository = "https://github.com/sileod/typed-models" }
 dependencies = ["torch", "transformers>=5", "datasets", "huggingface_hub", "safetensors", "numpy", "pandas", "pyarrow"]
