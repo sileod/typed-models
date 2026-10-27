@@ -20,6 +20,10 @@ import torch
 import torch.nn as nn
 
 CONFIG_NAME, WEIGHTS_NAME = "joint_config.json", "pytorch_model.bin"
+# Padded tokens per forward. Rows are length-sorted, so a small budget means length-homogeneous batches: on an A30,
+# 16 short requests train 1.35x faster at 4096 than at 65536 (0.170 vs 0.231 s/step), at 6.5 vs 10.4GB. A row longer
+# than the budget still runs, alone.
+TOKEN_BUDGET = 4096
 MASK_CELLS = 2 ** 26  # per forward: rows x length^2 dense mask cells (memory of the masks and SDPA bias)
 
 
@@ -50,9 +54,28 @@ class Decider:
         self.model.to(self.device)
 
     @classmethod
-    def from_pretrained(cls, ckpt: str, device: Optional[str] = None) -> "Decider":
-        cfg = json.loads((Path(ckpt) / CONFIG_NAME).read_text())
-        return cls(cfg["base"], cfg["max_length"], device, str(Path(ckpt) / WEIGHTS_NAME), cfg.get("attn", "cached"))
+    def from_pretrained(cls, ckpt: str, device: Optional[str] = None, revision: Optional[str] = None) -> "Decider":
+        """A training run's output dir (joint_config.json + pytorch_model.bin), or a released checkpoint, local or on
+        the Hub (decider_config.json + config.json + model.safetensors, e.g. tasksource/tasksource-decider-nano)."""
+        path = Path(ckpt)
+        if not path.exists():
+            from huggingface_hub import snapshot_download
+            path = Path(snapshot_download(ckpt, revision=revision))
+        if (path / CONFIG_NAME).exists():
+            cfg = json.loads((path / CONFIG_NAME).read_text())
+            return cls(cfg["base"], cfg["max_length"], device, str(path / WEIGHTS_NAME), cfg.get("attn", "cached"))
+        from safetensors.torch import load_file
+        from transformers import AutoConfig, AutoModel, AutoTokenizer
+        cfg = json.loads((path / "decider_config.json").read_text())
+        self = cls.__new__(cls)  # the release ships the whole backbone: no download of the base weights
+        self.base, self.max_length, self.attn = str(path), int(cfg.get("train_max_length", 2048)), cfg.get("attn", "cached")
+        self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        self.tok = AutoTokenizer.from_pretrained(path)
+        backbone = AutoModel.from_config(AutoConfig.from_pretrained(path))
+        self.model = JointHead(backbone, backbone.config.hidden_size)
+        self.model.load_state_dict({k: v.float() for k, v in load_file(str(path / "model.safetensors")).items()})
+        self.model.to(self.device)
+        return self
 
     def save_pretrained(self, ckpt: str, **extra) -> None:
         d = Path(ckpt)
@@ -63,7 +86,7 @@ class Decider:
         (d / CONFIG_NAME).write_text(json.dumps(cfg, indent=2))
 
     @torch.no_grad()
-    def score_many(self, items, max_length: Optional[int] = None, token_budget: int = 65536) -> List[np.ndarray]:
+    def score_many(self, items, max_length: Optional[int] = None, token_budget: int = TOKEN_BUDGET) -> List[np.ndarray]:
         """Option logits for [(state, question, options)], consecutive items with the same state sharing its encoding."""
         self.model.eval()
         reqs = []
@@ -152,7 +175,7 @@ def shared_rows(tok, requests, max_positions, row_tokens=16384, truncate=False, 
 
 
 def shared_logits(scorer: Decider, requests, max_positions: Optional[int] = None, row_tokens: int = 16384,
-                  token_budget: int = 65536, truncate: bool = False, row_extra: int = 2048, attn: str = "cached",
+                  token_budget: int = TOKEN_BUDGET, truncate: bool = False, row_extra: int = 2048, attn: str = "cached",
                   auto_extra: int = 4096) -> List[torch.Tensor]:
     """Option logits, one [K] tensor per question (requests flattened in order). Differentiable; the caller controls
     train/eval mode and grad. Rows are batched up to `token_budget` padded tokens per forward."""

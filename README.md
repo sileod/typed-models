@@ -24,6 +24,13 @@ bash recipes/nli/ultrabert_nli.sh
 
 ## Decider
 
+```python
+from typed_encoders.decider import Decider
+d = Decider.from_pretrained("tasksource/tasksource-decider-nano")      # a released checkpoint, or a training run's dir
+d.score_many([("The battery died after a week.", "What is the sentiment?", ["negative", "positive"])])
+# -> [array([ 0.39, -4.19])]  one logit per option, softmax over a question's options
+```
+
 A joint cross-encoder (`typed_encoders/decider.py`): every option of a question gets a scalar, softmaxed over the
 question's options. A request's state is encoded once and shared by all its questions and options (tree attention:
 an option sees the state, its question and itself), so a request with many questions costs little more than one.
